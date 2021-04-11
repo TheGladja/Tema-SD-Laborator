@@ -581,7 +581,7 @@ public:
 
         if (v->val != n)
         {
-            cout << "No node found to delete with value:" << n << endl;
+            cout << "\nNo node found to delete with value:" << n << endl;
             return;
         }
 
@@ -591,9 +591,9 @@ public:
     /// afiseaza arborele in ordine
     void printInOrder()
     {
-        cout << "Inorder: " << endl;
+        cout << "\nInorder: " << endl;
         if (root == NULL)
-            cout << "Tree is empty" << endl;
+            cout << "\nTree is empty" << endl;
         else
             inorder(root);
         cout << endl;
@@ -602,17 +602,67 @@ public:
     /// afiseaza arborele dupa ordinea nivelelor
     void printLevelOrder()
     {
-        cout << "Level order: " << endl;
+        cout << "\nLevel order: " << endl;
         if (root == NULL)
-            cout << "Tree is empty" << endl;
+            cout << "\nTree is empty" << endl;
         else
             levelOrder(root);
         cout << endl;
     }
 };
 
+void Options()
+{
+    cout<<"\nPress 1 for adding a new node";
+    cout<<"\nPress 2 for deleting a node";
+    cout<<"\nPress 3 for viewing the tree in level order";
+    cout<<"\nPress 4 for viewing the tree on sorted order";
+}
+
 int main()
 {
+    RBTree* tree= new RBTree;
+
+    int option, x;
+
+    do
+    {
+        Options();
+
+        cout<<"\n\nType your task: ";
+        cin>>option;
+
+        switch(option)
+        {
+        case 1:
+            {
+                cout<<"\nNode to insert: ";
+                cin>>x;
+                tree->insert(x);
+                break;
+            }
+        case 2:
+            {
+                cout<<"\nNode to delete: ";
+                cin>>x;
+                tree->deleteByVal(x);
+                break;
+            }
+        case 3:
+            {
+                tree->printLevelOrder();
+                break;
+            }
+        case 4:
+            {
+                tree->printInOrder();
+                break;
+            }
+        };
+    }while(option==1 || option==2 || option==3 || option==4);
+
+
+    cout<<"\nInvalid task\n";
 
     return 0;
 }
