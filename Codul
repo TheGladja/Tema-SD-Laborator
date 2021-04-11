@@ -1,0 +1,618 @@
+#include <bits/stdc++.h>
+
+using namespace std;
+
+enum COLOR { RED, BLACK };
+
+class Node
+{
+public:
+    int val;
+    COLOR color;
+    Node *left, *right, *parent;
+
+    Node(int val) : val(val)
+    {
+        parent = left = right = NULL;
+
+        /// Nodul este creat in timpul insertiei
+        /// In momentul inserarii nodul este rosu
+        color = RED;
+    }
+
+    /// returneaza pointerul unchi
+
+    Node *uncle()
+    {
+        /// Daca nu exista un parinte sau un bunic,  unchi va deveni nul
+        if (parent == NULL or parent->parent == NULL)
+            return NULL;
+
+        if (parent->isOnLeft())
+            /// unchiul va fi pe pozitia din dreapta
+            return parent->parent->right;
+        else
+            /// unchiul va fi pe pozitia din stanga
+            return parent->parent->left;
+    }
+
+    /// verifica daca nodul este in partea stanga a parintelui
+    bool isOnLeft()
+    {
+        return this == parent->left;
+    }
+
+    /// returneaza pointerul frate
+
+    Node *sibling()
+    {
+        /// devine nul daca nu exista parinte
+        if (parent == NULL)
+            return NULL;
+
+        if (isOnLeft())
+            return parent->right;
+
+        return parent->left;
+    }
+
+    /// muta nodul curent cu o pozitie in jos si adauga noul nod
+
+    void moveDown(Node *nParent)
+    {
+        if (parent != NULL)
+        {
+            if (isOnLeft())
+            {
+                parent->left = nParent;
+            }
+            else
+            {
+                parent->right = nParent;
+            }
+        }
+        nParent->parent = parent;
+        parent = nParent;
+    }
+
+    bool hasRedChild()
+    {
+        return (left != NULL and left->color == RED) or
+               (right != NULL and right->color == RED);
+    }
+};
+
+class RBTree
+{
+    Node *root;
+
+    /// muta spre stanga nodul curent
+    void leftRotate(Node *x)
+    {
+        /// noul parinte va fi in partea dreapta a nodului curent
+        Node *nParent = x->right;
+
+        /// actualizam radacina daca nodul curent este radacina
+        if (x == root)
+            root = nParent;
+
+        x->moveDown(nParent);
+
+        /// nodul x va primi adresa nodului din stanga noului nou
+        x->right = nParent->left;
+
+        /// nodul nou va primi adresa nodului curent daca nu este nul
+        if (nParent->left != NULL)
+            nParent->left->parent = x;
+
+        /// conectam noul nod cu cel curent
+        nParent->left = x;
+    }
+
+    void rightRotate(Node *x)
+    {
+
+        /// noul nod va fi copilul stang al nodului curent
+        Node *nParent = x->left;
+
+        /// actualizam radacina si nodul curent va deveni radacina
+        if (x == root)
+            root = nParent;
+
+        x->moveDown(nParent);
+
+        /// vom conecta nodul curent cu elementul din dreapta al nodului nou
+        x->left = nParent->right;
+
+        /// vom conecta elementul din dreapta al nodului nou cu nodul curent daca acesta nu este nul
+        if (nParent->right != NULL)
+            nParent->right->parent = x;
+
+        /// conectam noul noc cu nodul x
+        nParent->right = x;
+    }
+
+    void swapColors(Node *x1, Node *x2)
+    {
+        COLOR temp;
+        temp = x1->color;
+        x1->color = x2->color;
+        x2->color = temp;
+    }
+
+    void swapValues(Node *u, Node *v)
+    {
+        int temp;
+        temp = u->val;
+        u->val = v->val;
+        v->val = temp;
+    }
+
+    /// fixam culoarea nodului
+
+    void fixRedRed(Node *x)
+    {
+        /// daca nodul curent este radacina il facem negru si iesim din functie
+        if (x == root)
+        {
+            x->color = BLACK;
+            return;
+        }
+
+        /// initializam parintele, bunicul si unchiul
+        Node *parent = x->parent, *grandparent = parent->parent,
+              *uncle = x->uncle();
+
+        if (parent->color != BLACK)
+        {
+            if (uncle != NULL && uncle->color == RED)
+            {
+
+                /// daca unchiul este rosu il facem negru si reapelam functia
+                parent->color = BLACK;
+                uncle->color = BLACK;
+                grandparent->color = RED;
+                fixRedRed(grandparent);
+            }
+            else
+            {
+
+                /// altfel ne folosim de functile anterioare
+                if (parent->isOnLeft())
+                {
+                    if (x->isOnLeft())
+                    {
+
+                        /// penteu stanga dreapta
+                        swapColors(parent, grandparent);
+                    }
+                    else
+                    {
+                        leftRotate(parent);
+                        swapColors(x, grandparent);
+                    }
+
+                    /// pentru stanga stanga si stanga dreapta
+                    rightRotate(grandparent);
+                }
+                else
+                {
+                    if (x->isOnLeft())
+                    {
+
+                        /// pentru dreapta stanga
+                        rightRotate(parent);
+                        swapColors(x, grandparent);
+                    }
+                    else
+                    {
+                        swapColors(parent, grandparent);
+                    }
+
+                    /// pentru dreapta dreapta si dreapta stanga
+                    leftRotate(grandparent);
+                }
+            }
+        }
+    }
+
+    /// gasim nodul care nu are un copil in stanga in subarborele care incepe cu nodul dat
+    Node *successor(Node *x)
+    {
+        Node *temp = x;
+
+        while (temp->left != NULL)
+            temp = temp->left;
+
+        return temp;
+    }
+
+    /// cautam nodul care inlocuieste nodul sters
+    Node *BSTreplace(Node *x)
+    {
+
+        /// cand avem 2 copii
+        if (x->left != NULL and x->right != NULL)
+            return successor(x->right);
+
+        /// cand este o frunza
+        if (x->left == NULL and x->right == NULL)
+            return NULL;
+
+        ///cand este un singur copil
+        if (x->left != NULL)
+            return x->left;
+        else
+            return x->right;
+    }
+
+    ///sterge nodul dat ca parametru
+    void deleteNode(Node *v)
+    {
+        Node *u = BSTreplace(v);
+
+        /// este adevarat cand u si v sunt ambele nerge
+        bool uvBlack = ((u == NULL or u->color == BLACK) and (v->color == BLACK));
+        Node *parent = v->parent;
+
+        if (u == NULL)
+        {
+
+            /// u nu este nu deci v este o furnza
+            if (v == root)
+            {
+
+                /// v este radacina si facem radacina nula
+                root = NULL;
+            }
+            else
+            {
+                if (uvBlack)
+                {
+
+                    /// u si v sunt ambele negre, v este frunza, si fixam cu functia de mai sus
+                    fixDoubleBlack(v);
+                }
+                else
+                {
+
+                    /// u sau v este rosu
+                    if (v->sibling() != NULL)
+
+                        /// fratele nu este nul, deci il facem rosu
+                        v->sibling()->color = RED;
+                }
+
+                /// stergem v din arbore
+                if (v->isOnLeft())
+                {
+                    parent->left = NULL;
+                }
+                else
+                {
+                    parent->right = NULL;
+                }
+            }
+            delete v;
+            return;
+        }
+
+        if (v->left == NULL or v->right == NULL)
+        {
+
+            /// daca v are 1 copil
+            if (v == root)
+            {
+
+                /// daca v este radacina v va deveni u si u ca fi sters
+                v->val = u->val;
+                v->left = v->right = NULL;
+                delete u;
+            }
+            else
+            {
+
+                /// vom detasa nodul v de arbore si vom trece mai departe
+                if (v->isOnLeft())
+                {
+                    parent->left = u;
+                }
+                else
+                {
+                    parent->right = u;
+                }
+                delete v;
+                u->parent = parent;
+                if (uvBlack)
+                {
+
+                    /// daca u si v sunt ambele negre, vom fixa cu ajutorul functiei de mai sus
+                    fixDoubleBlack(u);
+                }
+                else
+                {
+
+                    /// daca u sau v e rosu il coloram pe u in negru
+                    u->color = BLACK;
+                }
+            }
+            return;
+        }
+
+
+        /// v are 2 copii, schimbam valorile cu succesorii si reapelam functia
+        swapValues(u, v);
+        deleteNode(u);
+    }
+
+    void fixDoubleBlack(Node *x)
+    {
+        if (x == root)
+
+            /// s-a ajuns la radacina
+            return;
+
+        Node *sibling = x->sibling(), *parent = x->parent;
+        if (sibling == NULL)
+        {
+
+            /// nu exista un frate, deci reapelam functia
+            fixDoubleBlack(parent);
+        }
+        else
+        {
+            if (sibling->color == RED)
+            {
+
+                /// fratele este rosu
+                parent->color = RED;
+                sibling->color = BLACK;
+                if (sibling->isOnLeft())
+                {
+
+                    /// daca este in stanga
+                    rightRotate(parent);
+                }
+                else
+                {
+
+                    ///daca este in dreapta
+                    leftRotate(parent);
+                }
+                fixDoubleBlack(x);
+            }
+            else
+            {
+
+                /// daca fratele este negru
+                if (sibling->hasRedChild())
+                {
+
+                    /// daca este cel putin un copil rosu
+                    if (sibling->left != NULL and sibling->left->color == RED)
+                    {
+                        if (sibling->isOnLeft())
+                        {
+
+                            /// mutam la stanga de doua ori
+                            sibling->left->color = sibling->color;
+                            sibling->color = parent->color;
+                            rightRotate(parent);
+                        }
+                        else
+                        {
+
+                            /// mutam la dreapta si la stanga
+                            sibling->left->color = parent->color;
+                            rightRotate(sibling);
+                            leftRotate(parent);
+                        }
+                    }
+                    else
+                    {
+                        if (sibling->isOnLeft())
+                        {
+
+                            /// mutam la stanga si la dreapta
+                            sibling->right->color = parent->color;
+                            leftRotate(sibling);
+                            rightRotate(parent);
+                        }
+                        else
+                        {
+                            // right right
+                            /// mutam la dreapta de doua ori
+                            sibling->right->color = sibling->color;
+                            sibling->color = parent->color;
+                            leftRotate(parent);
+                        }
+                    }
+                    parent->color = BLACK;
+                }
+                else
+                {
+
+                    /// daca sunt 2 copii negri
+                    sibling->color = RED;
+                    if (parent->color == BLACK)
+                        fixDoubleBlack(parent);
+                    else
+                        parent->color = BLACK;
+                }
+            }
+        }
+    }
+
+
+    /// afiseaza ordinea in functie de nivele
+    void levelOrder(Node *x)
+    {
+        if (x == NULL)
+
+            /// se opreste daca nodul este null
+            return;
+
+
+        /// folosim o coada pentru ordinea nivelelor
+        queue<Node *> q;
+        Node *curr;
+
+
+        /// adaugam nodul curent
+        q.push(x);
+
+        while (!q.empty())
+        {
+
+            /// cat timp coada nu este goala stergem elementele
+            curr = q.front();
+            q.pop();
+
+            /// afisam valoarea nodului
+            cout << curr->val << " ";
+
+            /// adaugam copiii in coada
+            if (curr->left != NULL)
+                q.push(curr->left);
+            if (curr->right != NULL)
+                q.push(curr->right);
+        }
+    }
+
+    /// afiseaza nodurile in ordine cu ajutorul recursivitatii
+    void inorder(Node *x)
+    {
+        if (x == NULL)
+            return;
+        inorder(x->left);
+        cout << x->val << " ";
+        inorder(x->right);
+    }
+
+public:
+
+    /// constructorul care initializeaza radacina
+    RBTree()
+    {
+        root = NULL;
+    }
+
+    Node *getRoot()
+    {
+        return root;
+    }
+
+
+    /// cauta valoarea data ca parametru, daca o gaseste returneaza nodul, daca nu returneaza ultimul nod din parcurgerea arborelui
+    Node *search(int n)
+    {
+        Node *temp = root;
+        while (temp != NULL)
+        {
+            if (n < temp->val)
+            {
+                if (temp->left == NULL)
+                    break;
+                else
+                    temp = temp->left;
+            }
+            else if (n == temp->val)
+            {
+                break;
+            }
+            else
+            {
+                if (temp->right == NULL)
+                    break;
+                else
+                    temp = temp->right;
+            }
+        }
+
+        return temp;
+    }
+
+
+    /// insereaza valoarea data in arbore
+    void insert(int n)
+    {
+        Node *newNode = new Node(n);
+        if (root == NULL)
+        {
+
+            /// cand radacina este nula insereaza valoarea la radacina
+            newNode->color = BLACK;
+            root = newNode;
+        }
+        else
+        {
+            Node *temp = search(n);
+
+            if (temp->val == n)
+            {
+
+                /// iese din functie daca valoarea exista deja
+                return;
+            }
+
+            /// daca valoarea nu este gasita, se va returna nodul unde valoarea va trebui sa fie inserata
+            newNode->parent = temp;
+
+            if (n < temp->val)
+                temp->left = newNode;
+            else
+                temp->right = newNode;
+
+            /// aplicam functia rosu rosu daca exista aceasta neregula
+            fixRedRed(newNode);
+        }
+    }
+
+
+    /// functia care sterge nodul cu valoarea data ca parametru
+    void deleteByVal(int n)
+    {
+        if (root == NULL)
+
+            /// daca arborele este gol
+            return;
+
+        Node *v = search(n), *u;
+
+        if (v->val != n)
+        {
+            cout << "No node found to delete with value:" << n << endl;
+            return;
+        }
+
+        deleteNode(v);
+    }
+
+    /// afiseaza arborele in ordine
+    void printInOrder()
+    {
+        cout << "Inorder: " << endl;
+        if (root == NULL)
+            cout << "Tree is empty" << endl;
+        else
+            inorder(root);
+        cout << endl;
+    }
+
+    /// afiseaza arborele dupa ordinea nivelelor
+    void printLevelOrder()
+    {
+        cout << "Level order: " << endl;
+        if (root == NULL)
+            cout << "Tree is empty" << endl;
+        else
+            levelOrder(root);
+        cout << endl;
+    }
+};
+
+int main()
+{
+
+    return 0;
+}
